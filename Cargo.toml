@@ -1,8 +1,10 @@
 [package]
-name = "RustyShell"
+name = "rshell"
 version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+default-net = "0.11.0"
+pnet = { version = "0.31.0", features = ["std"] }

